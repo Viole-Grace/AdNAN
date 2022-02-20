@@ -1,0 +1,22 @@
+#local environment
+venv
+
+#input/output folders
+Datasets/
+Outputs/
+
+#cache files
+*/__pycache__
+*.pyc
+
+#ipython notebooks
+*.ipynb
+*.ipynb_checkpoints/
+
+#documentation or presentation files
+*.docx
+*.pptx
+
+#input/output files
+*.xlsx
+*.csv
