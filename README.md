@@ -1,4 +1,4 @@
-# AdNAn
+# AdNAN
 Adaptive iNtelligence for contextuAl taxoNomy - AdNAN
 
 ## Self Supervision:
@@ -9,4 +9,4 @@ Deep Neural Networks 'encode' this information using large amounts of data, and 
 
 However, representation in text is also a function of how spoken or written language works -- specifically, an underlying grammatical structure to give 'meaning' to pieces of text. This structure can be understood (to some extent) by using dependency / constituency parsers. 
 
-## AdNAN is an effort to leverage this relational understanding for learning data patterns as an intermediate step to improving performance for downstream tasks, particularly in unsupervised settings like clustering.
+**AdNAN** is an effort to leverage this relational understanding for learning data patterns as an intermediate step to improving performance for downstream tasks, particularly in unsupervised settings like clustering.
