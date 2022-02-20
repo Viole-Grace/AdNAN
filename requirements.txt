@@ -6,3 +6,5 @@ sklearn
 xgboost
 ipykernel
 umap-learn==0.5.1
+openpyxl
+xlrd
