@@ -151,7 +151,7 @@ class ObjectExtractor(RelationExtractor):
 
         Args:
             phrases (list): list of strings for which objects are extracted
-            nlp (spacy.lang.en model, optional): spacy.lang.en model. Defaults to 'en_core_web_sm'.
+            nlp (spacy.lang.en model, optional): spacy.lang.en model. Defaults to 'en_core_web_md'.
             extend (bool, optional): use entire object string with reference to its children, instead of using just object string. Defaults to False.
             prune (bool, optional): remove objects that start with some verb/preposition tokens. Defaults to False.
 
@@ -221,14 +221,14 @@ class SubjectExtractor(RelationExtractor):
     def extract_subjects(self, phrases, nlp=nlp, extend=False):
         """
         Extracts subjects from a list of phrases
-        objects are identified using the spacy dependency parser. Visualize dependency parser : https://explosion.ai/demos/displacy
+        subjects are identified using the spacy dependency parser. Visualize dependency parser : https://explosion.ai/demos/displacy
 
         for a list of dependencies identified as subjects, refer preprocessing.constants.py
 
         Args:
-            phrases (list): phrases (list): list of strings for which objects are extracted
-            nlp (spacy.lang.en model, optional): spacy.lang.en model. Defaults to 'en_core_web_sm'.
-            extend (bool, optional): use entire subject string with reference to its children, instead of using just object string. Defaults to False.
+            phrases (list): list of strings for which objects are extracted
+            nlp (spacy.lang.en model, optional): spacy.lang.en model. Defaults to 'en_core_web_md'.
+            extend (bool, optional): use entire subject string with reference to its children, instead of using just subject string. Defaults to False.
 
         Returns:
             (list): list of list notation, where each list has subject strings of its respective phrase
@@ -247,3 +247,73 @@ class SubjectExtractor(RelationExtractor):
             subjects_in_all_phrases.append(subjects_in_phrase)
 
         return subjects_in_all_phrases
+
+class MentionedSubjectAndPredicateExtractor(SubjectExtractor, ObjectExtractor):
+
+    def __init__(self, subject_extractor_instance, object_extractor_instance):
+
+        super().__init__()
+
+        self.subject_extractor = subject_extractor_instance
+        self.object_extractor = object_extractor_instance
+
+    def extract_entities(self, texts, nlp=nlp, extend_subjects=False, extend_objects=False, prune=False):
+        """
+        Extracts subjects and objects as 'mentions' from a list of texts
+        subjects and objects are identified using the spacy dependency parser. Visualize dependency parser : https://explosion.ai/demos/displacy
+
+        for a list of dependencies identified as subjects and objects, refer preprocessing.constants.py
+
+        Args:
+            texts (list): list of strings for which objects are extracted
+            nlp (spacy.lang.en model, optional): spacy.lang.en model. Defaults to 'en_core_web_md'.
+            extend_subjects (bool, optional): use entire subject string with reference to its children, instead of using just subject string. Defaults to False.
+            extend_objects (bool, optional): use entire object string with reference to its children, instead of using just object string. Defaults to False.
+            prune (bool, optional): remove objects that start with some verb/preposition tokens. Defaults to False.
+
+        Returns:
+            (list): list of list notation, where each list has subject+object strings of its respective phrase
+        """
+
+        if isinstance(texts, str):
+            texts = [texts]
+
+        texts = self.preprocess_text(texts)
+
+        mentioned_subjects_and_predicates = []
+
+        for doc in nlp.pipe(texts):
+
+            mention = []
+
+            objects_in_text = self.extract_object(doc=doc, extend=extend_objects, prune=prune)
+            subjects_in_text = self.extract_subject(doc=doc, extend=extend_subjects)
+
+            #if there are no objects in text, just the subjects are the mentioned entities
+            if objects_in_text == []:
+                mentioned_subjects_and_predicates.append(subjects_in_text)
+                continue
+            
+            #add only those subjects as entities that are not substrings of any objects
+            for sub in subjects_in_text:
+
+                unique_subject = True
+                
+                for obj in objects_in_text:
+                    if sub in obj:
+                        unique_subject = False
+                        continue
+                
+                if unique_subject:
+                    mention.append([sub])
+            
+            #add all objects
+            mention.append(objects_in_text)
+
+            #flatten
+            mention = [arr for sublist in mention for arr in sublist]
+
+            #add unique subjects and objects to the list
+            mentioned_subjects_and_predicates.append(mention)
+
+        return mentioned_subjects_and_predicates
