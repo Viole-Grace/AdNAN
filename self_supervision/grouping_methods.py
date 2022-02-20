@@ -73,19 +73,24 @@ except:
         return unique_communities
 
 def form_similarity_matrix(embeddings):    
-    return cos_sim(embeddings, embeddings)
+    similarity_matrix = cos_sim(embeddings, embeddings)
+    
+    #similarity with itself should be 0
+    similarity_matrix.fill_diagonal_(0)
+
+    return similarity_matrix
 
 def similar_object_grouping(embeddings, threshold, group_size):
 
     similarity_matrix = form_similarity_matrix(embeddings=embeddings)
-    aux_similarity_matrix = similarity_matrix
+    aux_similarity_matrix = similarity_matrix.detach().clone()
 
     num_objects = len(embeddings)
     unique_groups = []
 
     for row in range(num_objects):
         
-        group = []
+        group = [row]
         for col in range(num_objects):
 
             #if similarity (rounded) is >= threshold, objects are similar
