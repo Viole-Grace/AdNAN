@@ -13,7 +13,7 @@ from self_supervision.relation_extractor import ObjectExtractor
 
 from self_supervision.grouping_methods import similar_object_detection, similar_object_communities
 
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+embedding_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
 class GroupData:
 
@@ -86,7 +86,28 @@ class GroupData:
             group_idx += 1
 
         #map the themes each data sample has
-        self.df['theme'] = self.df.apply(lambda x : list(set([self.reverse_lookup(ob) for ob in x.objects])), axis=1)
+        theme_dict = {object_group[0] : object_group for object_group in self.themes}
+        for k,v in theme_dict.items():
+            print('{} --> {} ...'.format(k, v[:3]))
+
+        themes_of_all_texts = []
+
+        for row in self.df.itertuples():
+
+            #get a set of unique themes by using reverse lookup of every object in a text sample
+            themes_per_data_sample = set([self.reverse_lookup(dictionary=theme_dict, value=object) for object in row.objects])
+
+            #if there is no overall theme for a sample, empty string is returned -- remove that
+            themes_per_data_sample = [theme for theme in themes_per_data_sample if theme != '']
+
+            #add these themes
+            themes_of_all_texts.append(themes_per_data_sample)
+
+        self.df['theme'] = themes_of_all_texts
+
+        #faster one liner way of doing the same -- but less readability
+        #reverse lookup for theme for EACH object of text samples -- if there is no overall theme, an empty string is returned; remove that
+        # self.df['theme'] = self.df['objects'].apply(lambda x : list(set([t for t in [self.reverse_lookup(dictionary=theme_dict, value=ob) for ob in x] if t != ''])))
 
         return self.df
 
@@ -115,14 +136,22 @@ class SimilarRelationExtractor:
         object_extractor =  ObjectExtractor()
 
         #create a column to tag all text samples with objects
-        self.all_objects = object_extractor.extract_objects(self.texts, extend=True)
+        self.all_objects = object_extractor.extract_objects(self.texts, extend=False)
         self.df['objects'] = self.all_objects
 
+        #flatten all objects
+        self.unique_objects = [arr for sublist in self.all_objects for arr in sublist]
+        
         #store the unique objects from the set of all objects
-        self.unique_objects = list(set(self.all_objects))
+        self.unique_objects = list(set(self.unique_objects))
+
+        print('{} unique objects from {} text samples'.format(len(self.unique_objects), len(self.texts)))
 
     def form_object_embeddings(self):
+
+        self.extract_objects_from_texts()
         self.object_embeddings = self.embedding_model.encode(self.unique_objects)
+        print('Formed embeddings for all unique objects ...')
 
     def group_objects_by_similarity(self, threshold, min_group_size):
 
@@ -157,10 +186,12 @@ class SimilarRelationExtractor:
 
         #group similar objects together
         if method == 'embedding_similarity':
-            self.group_objects_by_similarity(similarity_threshold=similarity_threshold, min_group_size=min_group_size)
+            self.group_objects_by_similarity(threshold=similarity_threshold, min_group_size=min_group_size)
 
         elif method == 'fast_clustering':
-            self.group_objects_by_clustering(similarity_threshold=similarity_threshold, min_group_size=min_group_size)
+            self.group_objects_by_clustering(threshold=similarity_threshold, min_group_size=min_group_size)
+
+        print('Formed {} Groupings :\n\n'.format(len(self.object_groups)))
 
         #autotag data by theme -- each theme is an object grouping
         group_by_theme = GroupData(object_groups = self.object_groups)
