@@ -1,5 +1,5 @@
 object_tags = ['dobj', 'attr', 'pobj', 'advmod', 'amod']
-subject_tags = ['nsubj', 'nsubjpass']
+subject_tags = ['nsubj', 'nsubjpass', 'csubj', 'csubjpass']
 
 noun_tags = ['NOUN', 'PROPN','PRON']
 modifier_tags = ['NOUN', 'ADV', 'ADJ']
