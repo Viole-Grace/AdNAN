@@ -1,5 +1,5 @@
 # AdNAN
-Adaptive iNtelligence for contextuAl taxoNomy - AdNAN
+Adaptive coNtextuAl taxoNomy - AdNAN
 
 ## Self Supervision:
 
