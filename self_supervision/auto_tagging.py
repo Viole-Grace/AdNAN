@@ -11,6 +11,8 @@ from sentence_transformers import SentenceTransformer
 
 from self_supervision.relation_extractor import ObjectExtractor
 
+from self_supervision.embedding_former import EmbeddingFormer
+
 from self_supervision.grouping_methods import similar_object_detection, similar_object_communities
 
 embedding_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
@@ -126,6 +128,7 @@ class SimilarRelationExtractor:
         self.object_embeddings = []
         self.object_groups = []
 
+        self.modified_text_embeddings = []
 
     def form_dataframe_from_texts(self):
         self.df = pd.DataFrame({'text':self.texts})
@@ -153,21 +156,44 @@ class SimilarRelationExtractor:
         self.object_embeddings = self.embedding_model.encode(self.unique_objects)
         print('Formed embeddings for all unique objects ...')
 
-    def group_objects_by_similarity(self, threshold, min_group_size):
+    def form_augmented_text_embeddings(self):
+        
+        self.modified_text_embeddings = EmbeddingFormer(embedding_model = self.embedding_model,
+                                                        augment = {'use_objects':True}
+                                                        ).form_embeddings()
+        print('Formed embeddings for all modified texts ...')
 
-        self.object_groups = similar_object_detection(unique_objects = self.unique_objects,
-                                                      embeddings = self.object_embeddings,
+    def group_objects_by_similarity(self, threshold, min_group_size, mode='objects'):
+
+        if mode == 'objects':
+            unique_objects = self.unique_objects
+            embeddings = self.object_embeddings
+
+        elif mode == 'texts':
+            unique_objects = self.texts
+            embeddings = self.modified_text_embeddings
+
+        self.object_groups = similar_object_detection(unique_objects = unique_objects,
+                                                      embeddings = embeddings,
                                                       threshold = threshold,
                                                       min_group_size = min_group_size)
 
-    def group_objects_by_clustering(self, threshold, min_group_size):
+    def group_objects_by_clustering(self, threshold, min_group_size, mode='objects'):
+        
+        if mode == 'objects':
+            unique_objects = self.unique_objects
+            embeddings = self.object_embeddings
 
-        self.object_groups = similar_object_communities(unique_objects = self.unique_objects,
-                                                        embeddings = self.object_embeddings,
-                                                        threshold=threshold,
-                                                        min_community_size=min_group_size)
+        elif mode == 'texts':
+            unique_objects = self.texts
+            embeddings = self.modified_text_embeddings
 
-    def auto_tag_data(self, similarity_threshold=0.75, method='embedding_similarity', min_group_size=2):
+        self.object_groups = similar_object_communities(unique_objects = unique_objects,
+                                                        embeddings = embeddings,
+                                                        threshold = threshold,
+                                                        min_community_size = min_group_size)
+
+    def auto_tag_data(self, similarity_threshold=0.75, method='embedding_similarity', mode='objects', min_group_size=2):
         """
         Method to combine similar objects. Used to reduce noise by combining very similar objects together.
         Embeddings are formed from all unqiue objects using a SentenceTransformer model
@@ -178,18 +204,25 @@ class SimilarRelationExtractor:
                                     supported modes:
                                     'embedding_similarity' : forms a object embeddings and their similarity matrix, groups similar objects together
                                     'fast_clustering' : uses sentence_transformers' community detection implementation to cluster objects together
+            mode (str, optional): mode used to combine texts. Defaults to 'objects'
+                                  supported modes:
+                                  'objects' : forms objects out of texts and uses these objects for clustering
+                                  'texts' : augments texts with objects and uses these texts for clustering
             min_group_size(int, optional): minimum group size for it to be considered a valid object grouping. Defaults to 2.
         """
 
-        #form embeddings for all objects
-        self.form_object_embeddings()
+        if mode == 'objects':
+            self.form_object_embeddings()
+
+        elif mode == 'texts':
+            self.form_augmented_text_embeddings()
 
         #group similar objects together
         if method == 'embedding_similarity':
-            self.group_objects_by_similarity(threshold=similarity_threshold, min_group_size=min_group_size)
+            self.group_objects_by_similarity(threshold=similarity_threshold, min_group_size=min_group_size, mode=mode)
 
         elif method == 'fast_clustering':
-            self.group_objects_by_clustering(threshold=similarity_threshold, min_group_size=min_group_size)
+            self.group_objects_by_clustering(threshold=similarity_threshold, min_group_size=min_group_size, mode=mode)
 
         print('Formed {} Groupings :\n\n'.format(len(self.object_groups)))
 
