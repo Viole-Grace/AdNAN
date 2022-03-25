@@ -1,4 +1,4 @@
-object_tags = ['dobj', 'attr', 'pobj', 'advmod', 'amod']
+object_tags = ['dobj', 'attr', 'pobj', 'advmod', 'amod', 'npadvmod', 'neg', 'acomp']
 subject_tags = ['nsubj', 'nsubjpass', 'csubj', 'csubjpass']
 
 noun_tags = ['NOUN', 'PROPN','PRON']
