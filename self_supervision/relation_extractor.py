@@ -8,6 +8,7 @@ import re
 import spacy
 
 from preprocessing.constants import *
+from preprocessing.helpers import remove_duplicates
 
 nlp = spacy.load('en_core_web_md')
 
@@ -134,11 +135,15 @@ class ObjectExtractor(RelationExtractor):
         #remove objects that dont have a noun in them
         objects = self.get_only_objects_with_noun(objects)
 
-        #remove objects that dont have a modifier in them
-        objects = self.get_only_objects_with_modifier(objects)
-
         #remove empty strings from objects and convert to lowercase
         objects = [object_string.strip().lower() for object_string in objects if object_string != '']
+
+        #remove duplicates
+        objects = remove_duplicates(objects)
+
+        #if there are no objects -- append subjects at the end of the string
+        if objects == []:
+            objects = SubjectExtractor().extract_subject(doc=doc, extend=True)
 
         return objects
 
@@ -215,6 +220,9 @@ class SubjectExtractor(RelationExtractor):
 
         #remove empty strings from subjects and convert to lowercase
         subjects = [subject_string.strip().lower() for subject_string in subjects if subject_string != '']
+
+        #remove duplicates
+        subjects = remove_duplicates(subjects)
 
         return subjects
         
